@@ -107,11 +107,9 @@ public class MainActivity extends AppCompatActivity {
 
                 long currentMillis = (new Date()).getTime();
            //   String path = sessionName + File.separator + mSensorName + "_" + sessionName;
-                String path = "Session_" + String.valueOf(currentMillis) +".txt" ;
 
 
-                //Text of the Document
-                String textToWrite = "bla bla bla";
+
 
                 //Checking the availability state of the External Storage.
                 String state = Environment.getExternalStorageState();
@@ -128,17 +126,19 @@ public class MainActivity extends AppCompatActivity {
                 //   mOutputStream = new BufferedOutputStream(new FileOutputStream(logFile, mAppend));
 */
 
+                String folderPath = "FolderTest";
 
-
-/*
-                File absoluteDir = new File(getExternalFilesDir(null), path);
-                if (!absoluteDir.exists()){
-                    absoluteDir.mkdirs();
+                if(counterScanIntervals == 0){
+                    File absoluteDir = new File(getExternalFilesDir(null), folderPath);
+                    if (!absoluteDir.exists()){
+                        absoluteDir.mkdirs();
+                    }
                 }
-                */
 
 
-                 logFile = new File(getExternalFilesDir(null), path);
+
+                String txtPath = folderPath + File.separator + "Session_" + currentMillis +".txt" ;
+                logFile = new File(getExternalFilesDir(null), txtPath);
 
                 try {
                     logFile.createNewFile();
@@ -214,7 +214,7 @@ public class MainActivity extends AppCompatActivity {
             mIsScanning = true;
 
             toggle.setEnabled(false);
-            new CountDownTimer(20000, 1000) {
+            new CountDownTimer(5000, 1000) {
                 public void onTick(long millisUntilFinished) {
                 }
                 public void onFinish() {
@@ -326,7 +326,7 @@ public class MainActivity extends AppCompatActivity {
 
         }else {
             Log.i("scanning", "Done with scanning");
-
+            counterScanIntervals = 0;
         }
 
         // mTimerHandler.removeCallbacks(mTimerRunnable);
