@@ -17,23 +17,19 @@ import android.os.CountDownTimer;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.ParcelUuid;
-import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.WindowManager;
-import android.widget.CompoundButton;
 import android.widget.ToggleButton;
 
-import java.io.BufferedOutputStream;
+import org.altbeacon.beacon.BeaconParser;
+import org.altbeacon.beacon.service.scanner.ScanFilterUtils;
+
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 
@@ -52,26 +48,31 @@ import java.util.UUID;
 public class MainActivity extends AppCompatActivity {
 
 
-    private boolean mIsScanning = false;
+    private boolean mIsScanningWindow = false;
 
     BluetoothManager bluetoothManager = null;
     BluetoothAdapter bluetoothAdapter = null;
     BluetoothLeScanner bluetoothLeScanner = null;
+    List<ScanFilter> scanFilters = null;
     ToggleButton toggle = null;
-    File filesDir = null;
     File logFile = null;
-
+    CountDownTimer timerScanPeriod = null;
+    CountDownTimer timerScanWindow = null;
     ScanCallback leScanCallback = null;
-
+    int scanPeriodCounter = 0;
     int counter = 0;
-
-    int counterScanIntervals = 0;
+    int scanWindowCounter = 0;
     FileOutputStream outputStream = null;
+
+
+    ScanSettings scanSettings = null;
 
     @Override
     protected  void onDestroy() {
         super.onDestroy();
-        stopScan();
+        timerScanPeriod.cancel();
+        timerScanWindow.cancel();
+        stopScanWindow();
     }
 
     @Override
@@ -88,54 +89,50 @@ public class MainActivity extends AppCompatActivity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
       //  String path = sessionName + File.separator + mSensorName + "_" + sessionName;
 
-
-
-
-
-
-
-
-
-
-
         bluetoothManager = (BluetoothManager) this.getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = bluetoothManager.getAdapter();
-        bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
+        scanSettings = new ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build();
+        scanFilters = new ArrayList<>();
+
+
+
+        BeaconParser beaconParser = new BeaconParser().setBeaconLayout("s:0-1=fd6f,p:-:-59,i:2-17,d:18-21");
+        ArrayList<BeaconParser> beaconParsersArray = new ArrayList<>();
+        beaconParsersArray.add(beaconParser);
+
+      scanFilters =  new ScanFilterUtils().createScanFiltersForBeaconParsers(beaconParsersArray);
+
+        //ScanFilter filter = new ScanFilter.Builder().setServiceUuid(new ParcelUuid(covidUUI)).build();
+       // scanFilters.add(filter);
+
+   //  bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
+
+
+
         toggle = findViewById(R.id.toggleButton);
         toggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isChecked) {
-
                 long currentMillis = (new Date()).getTime();
            //   String path = sessionName + File.separator + mSensorName + "_" + sessionName;
-
-
-
-
                 //Checking the availability state of the External Storage.
                 String state = Environment.getExternalStorageState();
                 if (!Environment.MEDIA_MOUNTED.equals(state)) {
-
                     //If it isn't mounted - we can't write into it.
                     return;
                 }
-
                 /*
             File logFile = null;
                 logFile = LoggerHelper.defineLogFilename(this, "", "test", "txt", true);
                 //Log.i(TAG, "Creating file: "+logFile.getAbsolutePath());
                 //   mOutputStream = new BufferedOutputStream(new FileOutputStream(logFile, mAppend));
 */
-
                 String folderPath = "FolderTest";
-
-                if(counterScanIntervals == 0){
+                if(scanWindowCounter == 0){
                     File absoluteDir = new File(getExternalFilesDir(null), folderPath);
                     if (!absoluteDir.exists()){
                         absoluteDir.mkdirs();
                     }
                 }
-
-
 
                 String txtPath = folderPath + File.separator + "Session_" + currentMillis +".txt" ;
                 logFile = new File(getExternalFilesDir(null), txtPath);
@@ -158,67 +155,74 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 //    logger = new CustomLogger(context, path, sessionName, mSensorName, "txt", false, mNanosOffset, logFileMaxSize);
+                Log.i("scanning", "Starting Scanwindow: " + scanWindowCounter);
+                startScanWindow();
 
-                startScan();
-                Log.i("scanning", "startScan");
             } else {
-                Log.i("scanning", "stopScan");
+                Log.i("scanning", "Stoppin Scanwindow: " + scanWindowCounter);
 
-                stopScan();
+                stopScanWindow();
             }
         });
-
 
     }
 
 
 
-    public void startScan(){
+    public void startScanningPeriod(){
 
-        counter = 0;
+        Log.i("scanning", "Starting scanperiod: " + scanPeriodCounter);
 
-        /*
+        bluetoothAdapter = bluetoothManager.getAdapter();
+        bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
 
-        String serviceUuidString = "97f74301-d40f-42f9-aabd-c0234ac90fd9"; //uuid i wanna scan
-        String serviceUUIDString2 = "97F74301-D40F-42F9-AABD-C0234AC90FD9";
-        UUID toUiid = UUID.fromString(serviceUUIDString2);
-
-            ScanFilter.Builder mBuilder = new ScanFilter.Builder();
-            ByteBuffer mManufacturerData = ByteBuffer.allocate(23);
-            ByteBuffer mManufacturerDataMask = ByteBuffer.allocate(24);
-            byte[] uuid = getIdAsByte(toUiid);
-            mManufacturerData.put(0, (byte)0xBE);
-            mManufacturerData.put(1, (byte)0xAC);
-            for (int i=2; i<=17; i++) {
-                mManufacturerData.put(i, uuid[i-2]);
-            }
-            for (int i=0; i<=17; i++) {
-                mManufacturerDataMask.put((byte)0x01);
-            }
-            mBuilder.setManufacturerData(224, mManufacturerData.array(), mManufacturerDataMask.array());
-        ScanFilter  mScanFilter = mBuilder.build();
-
-*/
-
-        //ScanFilter filter = new ScanFilter.Builder().setServiceUuid(parcelUuid, parcelUuidMask).build();
-       // ScanFilter scanFilterMac = new ScanFilter.Builder().setDeviceAddress("F4:60:E2:C7:92:73").build();;
-        //scanFilters.add(mScanFilter);
-        leScanCallback = getLeScanCallback();
-        ScanSettings scanSettings = new ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build();
-        List<ScanFilter> scanFilters = new ArrayList<>();
-
-        if ((bluetoothLeScanner != null) && (!mIsScanning)) {
-            Log.i("scanning", "Starting to Scan for BLEADV");
-            // mBTAdapter.startLeScan(this);
+        if ((bluetoothLeScanner != null) ) {
+            leScanCallback = getLeScanCallback();
             bluetoothLeScanner.startScan( scanFilters, scanSettings, leScanCallback );
-            mIsScanning = true;
+        }
 
-            toggle.setEnabled(false);
-            new CountDownTimer(5000, 1000) {
+        if(timerScanPeriod != null){
+            timerScanPeriod.cancel();
+        }
+
+        timerScanPeriod = new CountDownTimer(4096, 1000) {
                 public void onTick(long millisUntilFinished) {
                 }
                 public void onFinish() {
-                    counterScanIntervals++;
+                    if (bluetoothLeScanner != null) {
+                        bluetoothLeScanner.stopScan(leScanCallback);
+                        bluetoothLeScanner.flushPendingScanResults(leScanCallback);
+
+                        if(mIsScanningWindow){
+                            scanPeriodCounter++;
+                            startScanningPeriod();
+                        }
+
+                    }
+                }
+            };
+        timerScanPeriod.start();
+        }
+
+    public void startScanWindow(){
+        mIsScanningWindow = true;
+        scanPeriodCounter = 0;
+        startScanningPeriod();
+        counter = 0;
+
+           //Starting BLEScann
+
+            toggle.setEnabled(false);
+
+            if(timerScanWindow != null){
+                timerScanWindow.cancel();
+            }
+
+        timerScanWindow = new CountDownTimer(24000, 1000) {
+                public void onTick(long millisUntilFinished) {
+                }
+                public void onFinish() {
+                    scanWindowCounter++;
                     Log.i("scanning", "timerStop");
                     toggle.setChecked(false);
                     toggle.setEnabled(true);
@@ -226,10 +230,7 @@ public class MainActivity extends AppCompatActivity {
             }.start();
 
 
-        }
-
     }
-
 
     private ScanCallback getLeScanCallback(){
 
@@ -237,19 +238,15 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onScanResult(int callbackType, final ScanResult result) {
 
-
                 // if(result.getDevice().getAddress().equals("F4:60:E2:C7:92:73") || result.getDevice().getAddress().equals("80:7B:3E:28:53:18")){
-                     if(mIsScanning) {
-
+                     if(mIsScanningWindow) {
                          String UUIDToCompare =   "97F74301D40F42F9AABDC0234AC90FD9";
+                         String UUIDToCompare2 = "2F234454CF6D4A0FADF2F4911BA9FFA6";
+
                         String advHex =  bytesToHex(result.getScanRecord().getBytes());
-
-
-
                       //  Log.i("scanning", "Test: " +  advHex);
-
-                         if(advHex.contains(UUIDToCompare)){
-                             Log.i("scanning", "Test: " + result.getRssi());
+                      //   if(advHex.contains(UUIDToCompare2)){
+                             Log.i("scanning", "ScanWindowCounter: " + scanWindowCounter + " ScanPeriodCounter: " + scanPeriodCounter + " RSSI: " + result.getRssi() + " PacketCounter: " + counter);
 
                              long currentMillis = (new Date()).getTime();
                              String log =  String.format("%s", currentMillis) + ";" + result.getRssi();
@@ -258,14 +255,13 @@ public class MainActivity extends AppCompatActivity {
                              } catch (IOException e) {
                                  e.printStackTrace();
                              }
-
                              try{
                                  outputStream.write(System.lineSeparator().getBytes());
                              } catch (IOException e) {
                                  e.printStackTrace();
                              }
                              counter++;
-                       }
+                      // }
                     }
             }
 
@@ -280,6 +276,7 @@ public class MainActivity extends AppCompatActivity {
         };
         return leScanCallback;
     }
+
     public static String bytesToHex(byte[] bytes) {
 
        // Log.i("scanning", "ented");
@@ -293,15 +290,8 @@ public class MainActivity extends AppCompatActivity {
         return new String(hexChars);
     }
 
-    public void stopScan()  {
-        Log.i("scanning","stop:: Stopping scanning for BLEADV");
-
-
-        if (bluetoothLeScanner != null) {
-            bluetoothLeScanner.stopScan(leScanCallback);
-            bluetoothLeScanner.flushPendingScanResults(leScanCallback);
-        }
-        mIsScanning = false;
+    public void stopScanWindow()  {
+        mIsScanningWindow = false;
 
        try {
            outputStream.flush();
@@ -316,24 +306,17 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-
-        if(counterScanIntervals<3){
-        Log.i("scanning", "starting ScanInterval: "+  counterScanIntervals);
+        if(scanWindowCounter <3){
+        Log.i("scanning", "starting ScanInterval: "+ scanWindowCounter);
             Handler handler = new Handler();
             handler.postDelayed(() -> toggle.setChecked(true), 2000);
 
-
-
         }else {
             Log.i("scanning", "Done with scanning");
-            counterScanIntervals = 0;
+            scanWindowCounter = 0;
         }
-
         // mTimerHandler.removeCallbacks(mTimerRunnable);
-
        // vibrator.vibrate(4000);
-
-
 
     //    logger.stop();
     }
