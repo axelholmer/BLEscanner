@@ -47,7 +47,9 @@ import java.util.List;
 *
 *
 *   testa med tva telefoner med cwa vad för tak man kan ha tex.
-*   Kolla uuid
+*     todo fixa ngn form av callback när BleScanner är klar, las knappar, vibrate etc.. Gör sa att blescanner thread blir interupted efter stop/när allt är klart. Experiemntera med olika time between scanperiods
+
+ *
 *
 *
 *
@@ -65,28 +67,31 @@ public class MainActivity extends AppCompatActivity {
     ToggleButton toggle = null;
     File logFile = null;
     CountDownTimer timerScanPeriod = null;
-    CountDownTimer timerScanWindow = null;
+   // CountDownTimer timerScanWindow = null;
     ScanCallback leScanCallback = null;
     int scanPeriodCounter = 0;
     int packageCounter = 0;
-    int scanWindowCounter = 0;
+    int currentScanWindow = 0;
     FileOutputStream outputStream = null;
     MediaPlayer mediaPlayer = null;
     Vibrator vibrator = null;
-
     Handler delayBetweenScanwindowHandler = null;
     Handler delayBetweenscanperiodHandler = null;
     TextView mScanlogTextView = null;
     EditText mFolderEditText = null;
-    EditText mScanwindowCounterEditText = null;
+    EditText mNumberOfscanwindowsEditText = null;
     EditText mScanwindowDurationEditText = null;
     EditText mScanperiodDurationEditText = null;
     EditText mRssiLimitEditText = null;
+    EditText mNumberOfscanperiodsEditText = null;
+    EditText mTimeBetweenScanperiodEditTexts= null;
+    Blescanner bleScanner = null;
+
     Button mStartScanButton;
     Button mStoptScanButton;
 
     Boolean isStoppedByUsed = false;
-
+    String folderPath = "";
 
     int rssiLimit = 0;
     String logString = "";
@@ -97,9 +102,10 @@ public class MainActivity extends AppCompatActivity {
     protected  void onDestroy() {
         super.onDestroy();
         timerScanPeriod.cancel();
-        timerScanWindow.cancel();
+       // timerScanWindow.cancel();
         stopScanWindow();
     }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -136,18 +142,30 @@ public class MainActivity extends AppCompatActivity {
         vibrator = ((Vibrator) this.getSystemService(Context.VIBRATOR_SERVICE));
 
         //uiElements
-        mScanwindowDurationEditText = findViewById(R.id.scanwindowDurationEditText);
-        mScanwindowCounterEditText = findViewById(R.id.scanwindowCounterEditText);
+
+
+
+        mNumberOfscanwindowsEditText = findViewById(R.id.numberOfScanwindowsEditText);
         mFolderEditText = findViewById(R.id.FolderEditText);
         mScanlogTextView = findViewById(R.id.scanlogTextView);
         mScanperiodDurationEditText = findViewById(R.id.scanperiodDurationEditText);
         mRssiLimitEditText = findViewById(R.id.rssiLimitEditText);
-       // toggle = findViewById(R.id.toggleButton);
+
         mStartScanButton = findViewById(R.id.startScanButton);
-       // mStoptScanButton = findViewById(R.id.stopScanButton);
+        mTimeBetweenScanperiodEditTexts = findViewById(R.id.timeBetweenScanperiodEditTexts);
+        mNumberOfscanperiodsEditText = findViewById(R.id.numberOfScanperiodsEditText);
 
 
-        mStartScanButton.setOnClickListener(view -> start());
+        // mStoptScanButton = findViewById(R.id.stopScanButton);
+
+
+        mStartScanButton.setOnClickListener(view -> {
+            try {
+                start();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
 
      //  mStoptScanButton.setOnClickListener(view -> stop());
 
@@ -226,19 +244,34 @@ public class MainActivity extends AppCompatActivity {
 
     public void setInputsDisabled(Boolean isEnabled){
         isStoppedByUsed = isEnabled;
-        mScanwindowDurationEditText.setEnabled(isEnabled);
-        mScanwindowCounterEditText.setEnabled(isEnabled);
+        mNumberOfscanwindowsEditText.setEnabled(isEnabled);
         mFolderEditText.setEnabled(isEnabled);
         mScanperiodDurationEditText.setEnabled(isEnabled);
         mStartScanButton.setEnabled(isEnabled);
     }
 
 
-    public void start(){
+    public void start() throws InterruptedException {
         setInputsDisabled(false);
 
+        int rssiLimit = Integer.parseInt(String.valueOf(mRssiLimitEditText.getText()));
+        int timeBetweenScanperiods = Integer.parseInt(String.valueOf(mTimeBetweenScanperiodEditTexts.getText()));
+        int numbersOfScanperiods = Integer.parseInt(String.valueOf(mNumberOfscanperiodsEditText.getText()));
+        int numberOfScanwindows = Integer.parseInt(String.valueOf(mNumberOfscanwindowsEditText.getText()));
+        int scanperiodDuration =  Integer.parseInt(String.valueOf(mScanperiodDurationEditText.getText()));
+        folderPath = String.valueOf(mFolderEditText.getText());
 
+        String state = Environment.getExternalStorageState();
+        if (!Environment.MEDIA_MOUNTED.equals(state)) {
+            //If it isn't mounted - we can't write into it.
+            return;
+        }
 
+        File absoluteDir = new File(getExternalFilesDir(null), folderPath);
+        if (!absoluteDir.exists()){
+            absoluteDir.mkdirs();
+        }
+/*
         timerScanPeriod = new CountDownTimer(Integer.parseInt(String.valueOf(mScanperiodDurationEditText.getText())), 1000) {
             public void onTick(long millisUntilFinished) {
             }
@@ -247,14 +280,14 @@ public class MainActivity extends AppCompatActivity {
                     bluetoothLeScanner.stopScan(leScanCallback);
                     bluetoothLeScanner.flushPendingScanResults(leScanCallback);
 
-                    if(mIsScanningWindow){
+                    if(scanPeriodCounter < 6){
 
                         //Handler here
                         /*
                         delayBetweenscanperiodHandler.postDelayed(() -> {
                             scanPeriodCounter++;
                             startScanningPeriod();}, 2000);
-                            */
+
 
                         scanPeriodCounter++;
                         startScanningPeriod();
@@ -263,22 +296,47 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         };
+*/
+            //interupta/destroya denna när allt är klart ellr stopped.
+            bleScanner = new Blescanner(this,absoluteDir, folderPath,rssiLimit, mScanlogTextView, timeBetweenScanperiods, numbersOfScanperiods, numberOfScanwindows, scanperiodDuration  );
+            bleScanner.start();
 
+
+
+
+
+
+
+
+        /*
+        //Here loop with how many scanperiods. 6 scanperiods == 30min scanwindow.
         timerScanWindow = new CountDownTimer(Integer.parseInt(String.valueOf(mScanwindowDurationEditText.getText())), 1000) {
             public void onTick(long millisUntilFinished) {
             }
             public void onFinish() {
                 scanWindowCounter++;
                 Log.i("scanning", "timerStop");
-
                 setScanning(false);
                 //toggle.setChecked(false);
                // toggle.setEnabled(true);
             }
         };
-
         setScanning(true);
+
+*/
+
     }
+
+    public void startScanperiod(){
+
+    }
+
+
+
+
+
+
+
 
     public void stop(){
 
@@ -309,7 +367,7 @@ public class MainActivity extends AppCompatActivity {
 
             //String folderPath = "FolderTest";
             String folderPath = String.valueOf(mFolderEditText.getText());
-            if(scanWindowCounter == 0){
+            if(currentScanWindow == 0){
                 mediaPlayer.stop();
                 File absoluteDir = new File(getExternalFilesDir(null), folderPath);
                 if (!absoluteDir.exists()){
@@ -337,11 +395,11 @@ public class MainActivity extends AppCompatActivity {
             }
 
             //    logger = new CustomLogger(context, path, sessionName, mSensorName, "txt", false, mNanosOffset, logFileMaxSize);
-            Log.i("scanning", "Starting Scanwindow: " + scanWindowCounter);
+            Log.i("scanning", "Starting Scanwindow: " + currentScanWindow);
             startScanWindow();
 
         } else {
-            Log.i("scanning", "Stoppin Scanwindow: " + scanWindowCounter);
+            Log.i("scanning", "Stoppin Scanwindow: " + currentScanWindow);
 
             stopScanWindow();
         }
@@ -355,12 +413,29 @@ public class MainActivity extends AppCompatActivity {
         bluetoothAdapter = bluetoothManager.getAdapter();
         bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
 
+
+        long currentMillis = (new Date()).getTime();
+        String txtPath = folderPath + File.separator + "Session_" + currentMillis +".txt" ;
+        logFile = new File(getExternalFilesDir(null), txtPath);
+
+        try {
+            logFile.createNewFile();
+            outputStream = new FileOutputStream(logFile, true);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+
         if ((bluetoothLeScanner != null) ) {
             leScanCallback = getLeScanCallback();
             bluetoothLeScanner.startScan( scanFilters, scanSettings, leScanCallback );
         }
 
-        timerScanPeriod.start();
+
+        //Here wait for thread to finish
+       timerScanPeriod.start();
+
+
         }
 
     public void startScanWindow(){
@@ -373,7 +448,7 @@ public class MainActivity extends AppCompatActivity {
            //Starting BLEScann
 
 
-        timerScanWindow.start();
+     //   timerScanWindow.start();
     }
 
     private ScanCallback getLeScanCallback(){
@@ -390,7 +465,7 @@ public class MainActivity extends AppCompatActivity {
                         String advHex =  bytesToHex(result.getScanRecord().getBytes());
                       //  Log.i("scanning", "Test: " +  advHex);
                       //   if(advHex.contains(UUIDToCompare2)){
-                         String logText =  "ScanWindowCounter:" + scanWindowCounter + " ScanPeriodCounter:" + scanPeriodCounter + " RSSI:" + result.getRssi() + " PacketCounter:" + packageCounter + " ID: " + result.getDevice().getAddress();
+                         String logText =  "ScanWindowCounter:" + currentScanWindow + " ScanPeriodCounter:" + scanPeriodCounter + " RSSI:" + result.getRssi() + " PacketCounter:" + packageCounter + " ID: " + result.getDevice().getAddress();
                          Log.i("scanning", logText );
 
 
@@ -398,7 +473,7 @@ public class MainActivity extends AppCompatActivity {
                              mScanlogTextView.setText(logText);
                          // String.valueOf(mScanwindowPeriodEditText);
                              long currentMillis = (new Date()).getTime();
-                             logString += String.format("%s", currentMillis) + ";" + packageCounter + ";" + scanWindowCounter + ";" + scanPeriodCounter + ";" + result.getRssi() +";" +result.getDevice().getAddress()+'\n';
+                             logString += String.format("%s", currentMillis) + ";" + packageCounter + ";" + currentScanWindow + ";" + scanPeriodCounter + ";" + result.getRssi() +";" +result.getDevice().getAddress()+'\n';
 
                             /*
                              String log =  String.format("%s", currentMillis) + ";" + packageCounter + ";" + scanWindowCounter + ";" + scanPeriodCounter + ";" + result.getRssi();
@@ -468,7 +543,7 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        if( (scanWindowCounter < Integer.parseInt(String.valueOf(mScanwindowCounterEditText.getText()))) && !isStoppedByUsed){
+        if( (currentScanWindow < Integer.parseInt(String.valueOf(mNumberOfscanwindowsEditText.getText()))) && !isStoppedByUsed){
             delayBetweenScanwindowHandler.postDelayed(() ->
                     setScanning(true), 200);
                     //toggle.setChecked(true), 200);
@@ -477,7 +552,7 @@ public class MainActivity extends AppCompatActivity {
              vibrator.vibrate(10000);
             Log.i("scanning", "Done with scanning");
             mScanlogTextView.setText("Done with scanning");
-            scanWindowCounter = 0;
+            currentScanWindow = 0;
 
             setInputsDisabled(true);
 

@@ -8,25 +8,6 @@
 
     <Space android:layout_width="wrap_content" android:layout_height="10dp"/>
 
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-        <TextView
-            android:id="@+id/scanwindowTextView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Scanwindow duration" />
-
-        <EditText
-            android:id="@+id/scanwindowDurationEditText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ems="10"
-            android:inputType="number"
-            android:text="24000"
-            />
-    </LinearLayout>
 
 
     <LinearLayout
@@ -35,13 +16,13 @@
         android:orientation="horizontal">
 
         <TextView
-            android:id="@+id/scanwindowCounterTextView"
+            android:id="@+id/numberOfScanwindowsTextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Scanwindow counter" />
+            android:text="Number of scanwindows" />
 
         <EditText
-            android:id="@+id/scanwindowCounterEditText"
+            android:id="@+id/numberOfScanwindowsEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ems="10"
@@ -51,7 +32,25 @@
 
     </LinearLayout>
 
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <TextView
+            android:id="@+id/numberOfScanperiodsTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Number of scanperiods" />
 
+        <EditText
+            android:id="@+id/numberOfScanperiodsEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ems="10"
+            android:inputType="number"
+            android:text="6"
+            />
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="wrap_content"
@@ -70,6 +69,26 @@
             android:ems="10"
             android:inputType="number"
             android:text="4096"
+            />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <TextView
+            android:id="@+id/timeBetweenScanperiodTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Time between scanperiods" />
+
+        <EditText
+            android:id="@+id/timeBetweenScanperiodEditTexts"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ems="10"
+            android:inputType="number"
+            android:text="3000"
             />
     </LinearLayout>
 
