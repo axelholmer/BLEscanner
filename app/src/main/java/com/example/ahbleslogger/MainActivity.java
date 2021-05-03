@@ -47,8 +47,8 @@ import java.util.List;
 *
 *
 *   testa med tva telefoner med cwa vad för tak man kan ha tex.
-*     todo fixa ngn form av callback när BleScanner är klar, las knappar, vibrate etc.. Gör sa att blescanner thread blir interupted efter stop/när allt är klart. Experiemntera med olika time between scanperiods
-
+*     Experiemntera med olika time between scanperiods
+*
  *
 *
 *
@@ -57,7 +57,7 @@ import java.util.List;
 *
 * */
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements ScannerCallback{
 
     private boolean mIsScanningWindow = false;
     BluetoothManager bluetoothManager = null;
@@ -104,6 +104,7 @@ public class MainActivity extends AppCompatActivity {
         timerScanPeriod.cancel();
        // timerScanWindow.cancel();
         stopScanWindow();
+        bleScanner.interrupt();
     }
 
 
@@ -119,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
                 Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.READ_EXTERNAL_STORAGE},0);
 
 
-        rssiLimit = -105;
+
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
       //  String path = sessionName + File.separator + mSensorName + "_" + sessionName;
 
@@ -243,11 +244,13 @@ public class MainActivity extends AppCompatActivity {
 
 
     public void setInputsDisabled(Boolean isEnabled){
-        isStoppedByUsed = isEnabled;
         mNumberOfscanwindowsEditText.setEnabled(isEnabled);
         mFolderEditText.setEnabled(isEnabled);
         mScanperiodDurationEditText.setEnabled(isEnabled);
         mStartScanButton.setEnabled(isEnabled);
+        mNumberOfscanperiodsEditText.setEnabled(isEnabled);
+        mTimeBetweenScanperiodEditTexts.setEnabled(isEnabled);
+        mRssiLimitEditText.setEnabled(isEnabled);
     }
 
 
@@ -298,7 +301,7 @@ public class MainActivity extends AppCompatActivity {
         };
 */
             //interupta/destroya denna när allt är klart ellr stopped.
-            bleScanner = new Blescanner(this,absoluteDir, folderPath,rssiLimit, mScanlogTextView, timeBetweenScanperiods, numbersOfScanperiods, numberOfScanwindows, scanperiodDuration  );
+            bleScanner = new Blescanner(this,absoluteDir, folderPath,rssiLimit, mScanlogTextView, timeBetweenScanperiods, numbersOfScanperiods, numberOfScanwindows, scanperiodDuration, this );
             bleScanner.start();
 
 
@@ -327,24 +330,14 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public void startScanperiod(){
-
-    }
-
-
-
-
-
-
-
 
     public void stop(){
 
-        isStoppedByUsed = true;
+        vibrator.vibrate(10000);
+        Log.i("scanning", "Done with scanning");
+        mScanlogTextView.setText("Done with scanning");
 
         setInputsDisabled(true);
-
-        setScanning(false);
     }
 
     public void setScanning(Boolean startScan){
@@ -563,4 +556,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+    @Override
+    public void doneScanning() {
+        runOnUiThread(() -> stop());
+    }
 }

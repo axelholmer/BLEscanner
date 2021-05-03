@@ -88,7 +88,7 @@
             android:layout_height="wrap_content"
             android:ems="10"
             android:inputType="number"
-            android:text="3000"
+            android:text="2000"
             />
     </LinearLayout>
 

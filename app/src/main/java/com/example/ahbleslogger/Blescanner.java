@@ -46,7 +46,10 @@ public class Blescanner extends Thread  {
     int numberOfScanwindows;
     int scanperiodDuration;
     FileOutputStream outputStream = null;
-    public Blescanner(Context context, File absoluteDir, String folderPath, int rssiLimit, TextView mScanlogTextView, int timeBetweenScanperiods, int numberOfScanperiods, int numberOfScanwindows, int scanperiodDuration) {
+    ScannerCallback scannerCallback;
+
+
+    public Blescanner(Context context, File absoluteDir, String folderPath, int rssiLimit, TextView mScanlogTextView, int timeBetweenScanperiods, int numberOfScanperiods, int numberOfScanwindows, int scanperiodDuration, ScannerCallback scannerCallback) {
         this.context = context;
         this.absoluteDir = absoluteDir;
         this.folderPath = folderPath;
@@ -56,6 +59,7 @@ public class Blescanner extends Thread  {
         this.numberOfScanperiods = numberOfScanperiods;
         this.numberOfScanwindows = numberOfScanwindows;
         this.scanperiodDuration = scanperiodDuration;
+        this.scannerCallback = scannerCallback;
 
 
 
@@ -97,7 +101,6 @@ public class Blescanner extends Thread  {
                 return;
             }
 
-
             long currentMillis = (new Date()).getTime();
             String txtPath = folderPath + File.separator + "Session_" + currentMillis +".txt" ;
             File logFile = new File(context.getExternalFilesDir(null), txtPath);
@@ -130,14 +133,12 @@ public class Blescanner extends Thread  {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                scanPeriodThread.interrupt();
 
                 Log.i("scanning", "Stopping scanperiod: " + scanPeriodCounter);
             }
 
             try {
                 outputStream.flush();
-
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -150,6 +151,10 @@ public class Blescanner extends Thread  {
 
             Log.i("scanning", "Stoping Scanwindow: " + counterScanwindows);
         }
+
+        //When all scanwindows done
+        scannerCallback.doneScanning();
+
     }
 
     public void startScanningPeriod(){
@@ -160,27 +165,33 @@ public class Blescanner extends Thread  {
             leScanCallback = getLeScanCallback();
 
             //game loop
-            Thread bluetoothScannerThread = new Thread(() ->  bluetoothLeScanner.startScan( scanFilters, scanSettings, leScanCallback ));
+           // Thread bluetoothScannerThread = new Thread(() ->  bluetoothLeScanner.startScan( scanFilters, scanSettings, leScanCallback ));
+
+
+            Thread bluetoothScannerThread = new Thread(() -> {
+
+                bluetoothLeScanner.startScan( scanFilters, scanSettings, leScanCallback );
+
+                //Scan for 4096 ms
+                try {
+                    Thread.sleep(scanperiodDuration);
+                    //   wait(4096);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                bluetoothLeScanner.stopScan(leScanCallback);
+                bluetoothLeScanner.flushPendingScanResults(leScanCallback);
+            });
 
             bluetoothScannerThread.start();
 
-            //Scan for 4096 ms
             try {
-                Thread.sleep(scanperiodDuration);
-             //   wait(4096);
+                bluetoothScannerThread.join();
             } catch (Exception e) {
                 e.printStackTrace();
             }
-
-            bluetoothLeScanner.stopScan(leScanCallback);
-            bluetoothLeScanner.flushPendingScanResults(leScanCallback);
-            bluetoothScannerThread.interrupt();
-
         }
 
-
-
-        //This should be done after four seconds.
         try {
             outputStream.write(logString.getBytes());
         } catch (Exception e) {
@@ -189,7 +200,7 @@ public class Blescanner extends Thread  {
 
 
 
-        //wait 5000ms before starting another scanperiod
+        //wait before starting another scanperiod
         try {
             Thread.sleep(timeBetweenScanperiods);
         } catch (Exception e) {
