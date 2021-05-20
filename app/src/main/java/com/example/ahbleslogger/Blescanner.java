@@ -167,15 +167,12 @@ public class Blescanner extends Thread  {
             //game loop
            // Thread bluetoothScannerThread = new Thread(() ->  bluetoothLeScanner.startScan( scanFilters, scanSettings, leScanCallback ));
 
-
             Thread bluetoothScannerThread = new Thread(() -> {
 
                 bluetoothLeScanner.startScan( scanFilters, scanSettings, leScanCallback );
 
-                //Scan for 4096 ms
                 try {
                     Thread.sleep(scanperiodDuration);
-                    //   wait(4096);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -184,7 +181,6 @@ public class Blescanner extends Thread  {
             });
 
             bluetoothScannerThread.start();
-
             try {
                 bluetoothScannerThread.join();
             } catch (Exception e) {
@@ -198,15 +194,12 @@ public class Blescanner extends Thread  {
             e.printStackTrace();
         }
 
-
-
         //wait before starting another scanperiod
         try {
             Thread.sleep(timeBetweenScanperiods);
         } catch (Exception e) {
             e.printStackTrace();
         }
-
     }
 
     private ScanCallback getLeScanCallback(){

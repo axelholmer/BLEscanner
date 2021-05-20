@@ -108,7 +108,7 @@
             android:layout_height="wrap_content"
             android:ems="10"
             android:inputType="number"
-            android:text="-96"
+            android:text="-115"
             />
     </LinearLayout>
 

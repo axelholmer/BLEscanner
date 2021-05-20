@@ -48,7 +48,7 @@ import java.util.List;
 *
 *   testa med tva telefoner med cwa vad för tak man kan ha tex.
 *     Experiemntera med olika time between scanperiods
-*
+*       Gör input för delay before starting all scanwindows.
  *
 *
 *
@@ -300,9 +300,17 @@ public class MainActivity extends AppCompatActivity implements ScannerCallback{
             }
         };
 */
+
+
+
             //interupta/destroya denna när allt är klart ellr stopped.
             bleScanner = new Blescanner(this,absoluteDir, folderPath,rssiLimit, mScanlogTextView, timeBetweenScanperiods, numbersOfScanperiods, numberOfScanwindows, scanperiodDuration, this );
-            bleScanner.start();
+
+        Handler delayBeforeStartHandler = new Handler();
+        delayBeforeStartHandler.postDelayed(() ->
+                bleScanner.start(), 5000);
+
+
 
 
 
